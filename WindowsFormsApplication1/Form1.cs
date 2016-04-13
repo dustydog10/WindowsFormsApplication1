@@ -42,6 +42,7 @@ namespace XmlCompareApp
 
             // display the list of block_types we have collected
             textBox1.Text = String.Join(Environment.NewLine, baseAttrList);
+            baseCountLabel.Text = baseAttrList.Count.ToString() + " block types found";
         }
 
         private void openTestXMLFile_Click(object sender, EventArgs e)
@@ -63,29 +64,32 @@ namespace XmlCompareApp
 
             // display the list of block_types we have collected
             textBox2.Text = String.Join(Environment.NewLine, testAttrList);
-
+            testCountLabel.Text = testAttrList.Count.ToString() + " block types found";
         }
 
         private void parseXMLAttr(string XMLFile, List<string> attrList)
         {
-            // This is forward-only code. Use XmlDocument to cache whole file in memory.
+            // see previous version for the xmlReader solution
             string srchAttrName = "block_type";
-            XmlReader xmlReader = XmlReader.Create(XMLFile);
-            while (xmlReader.Read())
-            {
-                if (xmlReader.NodeType == XmlNodeType.Element)
-                {
-                    // here's how to see the tag name
-                    // Console.WriteLine(xmlReader.Name);
+            // XPath string saying "All nodes with attribute we have indicated"
+            string selectAllBlockTypes = "//@" + srchAttrName;
 
-                    if (xmlReader.HasAttributes)
-                    {
-                        string attrval = xmlReader.GetAttribute(srchAttrName);
-                        if ((attrval != null) && (!attrList.Exists(element => element == attrval)))
-                        {
-                            attrList.Add(attrval);
-                        }
-                    }
+            // XmlDocument needs these lines instead of the one used by XmlReader
+            XmlDocument xmlDoc = new XmlDocument();
+            xmlDoc.Load(XMLFile);
+
+            // set up XPath for all elements with data_block attribute
+            XmlNodeList btNodes = xmlDoc.SelectNodes(selectAllBlockTypes);
+
+            // for each node in list
+            for (int i = 0; i < btNodes.Count; i++)
+            {
+                // fetch the attribute value
+                string attrval = btNodes[i].Value;
+                // if not yet indicated, add to diff list
+                if ((attrval != null) && (!attrList.Exists(element => element == attrval)))
+                {
+                    attrList.Add(attrval);
                 }
             }
         }
