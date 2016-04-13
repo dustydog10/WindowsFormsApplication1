@@ -13,8 +13,15 @@ namespace XmlCompareApp
 {
     public partial class Form1 : Form
     {
-        List<string> baseAttrList = new List<string>();
-        List<string> testAttrList = new List<string>();
+        class TagNode
+        {
+            public string tagName { get; set; }
+            public string blockType { get; set; }
+        }
+
+        List<TagNode> baseAttrList = new List<TagNode>();
+        List<TagNode> testAttrList = new List<TagNode>();
+        List<TagNode> compareAttrList = new List<TagNode>();
 
         public Form1()
         {
@@ -41,7 +48,8 @@ namespace XmlCompareApp
             parseXMLAttr(XMLFile, baseAttrList);
 
             // display the list of block_types we have collected
-            textBox1.Text = String.Join(Environment.NewLine, baseAttrList);
+            displayTagNodeArrayToTextBox(textBox1, baseAttrList);
+
             baseCountLabel.Text = baseAttrList.Count.ToString() + " block types found";
         }
 
@@ -63,11 +71,12 @@ namespace XmlCompareApp
             parseXMLAttr(XMLFile, testAttrList);
 
             // display the list of block_types we have collected
-            textBox2.Text = String.Join(Environment.NewLine, testAttrList);
+            displayTagNodeArrayToTextBox(textBox2, testAttrList);
+
             testCountLabel.Text = testAttrList.Count.ToString() + " block types found";
         }
 
-        private void parseXMLAttr(string XMLFile, List<string> attrList)
+        private void parseXMLAttr(string XMLFile, List<TagNode> attrList)
         {
             // see previous version for the xmlReader solution
             string srchAttrName = "block_type";
@@ -87,37 +96,61 @@ namespace XmlCompareApp
                 // fetch the attribute value
                 string attrval = btNodes[i].Value;
                 // if not yet indicated, add to diff list
-                if ((attrval != null) && (!attrList.Exists(element => element == attrval)))
+                if ((attrval != null) && (!attrList.Exists(element => element.blockType == attrval)))
                 {
-                    attrList.Add(attrval);
+                    TagNode tn = new TagNode { tagName = "p", blockType = attrval };
+                    attrList.Add(tn);
                 }
             }
         }
 
         private void compareBtn_Click(object sender, EventArgs e)
         {
-            int diffCnt = 0;
+            string attrval;
 
-            foreach (string attr in testAttrList)
+            // build a 3rd tag list with block types in 2nd file that aren't in 1st file
+            // check each block type found in the 2nd (test) XML file
+            foreach (TagNode tn in testAttrList)
             {
-                if (!baseAttrList.Exists(element => element == attr))
+                // extract just the block type value
+                attrval = tn.blockType;
+                // search the base list for this block type
+                if (!baseAttrList.Exists(element => element.blockType == attrval))
                 {
-                    compareTextBox.Text += attr + Environment.NewLine;
-                    diffCnt++;
+                    // not found and not yet in the diff list, so add it.
+                    TagNode newtn = new TagNode { tagName = "p", blockType = attrval };
+                    compareAttrList.Add(newtn);
                 }
             }
 
-            compareLabel.Text = diffCnt.ToString() + " new block types found";
+            // now display the new block types in a ListView control
+            displayTagNodeArrayToListView(compareListView, compareAttrList);
+
+            compareLabel.Text = compareAttrList.Count.ToString() + " new block types found";
+        }
+
+        private void displayTagNodeArrayToTextBox(TextBox tbox, List<TagNode> attrList)
+        {
+            tbox.Text = "";
+            foreach (TagNode tn in attrList)
+            {
+                tbox.Text += tn.blockType + Environment.NewLine;
+            }
+        }
+
+        private void displayTagNodeArrayToListView(ListView lv, List<TagNode> attrList)
+        {
+
+            lv.Items.Clear();
+
+
+            foreach (TagNode tn in attrList)
+            {
+                string[] listRow = { tn.tagName, tn.blockType };
+                ListViewItem lvi = new ListViewItem(listRow);
+                lv.Items.Add(lvi);
+            }
         }
     }
 }
-
-// original file reader code -- now switch to XMLReader
-// check the response
-//if (userClickedOK == true)
-//{
-// Open the selected file to read.
-//string text = System.IO.File.ReadAllText(XMLFile);
-//textBox1.Text = text;
-//}
 
